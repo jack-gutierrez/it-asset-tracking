@@ -5,7 +5,7 @@ app = FastAPI(title="IT Asset Tracker", version="0.1")
 
 app.include_router(assets.router, prefix="/assets", tags=["Assets"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
-app.include_router(checkouts.router, prefix="/checkout", tags=["Checkouts"])
+app.include_router(checkouts.router, prefix="/checkouts", tags=["Checkouts"])
 
 # root
 @app.get("/") # GET endpoint at the root path with Welcome Message
