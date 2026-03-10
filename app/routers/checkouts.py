@@ -1,27 +1,40 @@
 from fastapi import APIRouter
 from datetime import datetime, timezone
-from app.models import Checkout, CheckoutRequest
+from app.models import Checkout, CheckoutRequest, AssetStatus
 from app.database import checkouts
 from app.crud import find_asset, find_user, is_asset_checked_out, generate_id
+from fastapi import HTTPException
 
 router = APIRouter()
 
-# checkouts
+@router.get("/", response_model=list[Checkout])
+def list_checkouts():
+    return checkouts
+
+@router.get("/{id}", response_model=Checkout)
+def get_checkout(id: int):
+    checkout = next((c for c in checkouts if c.id == id), None)
+    if not checkout:
+        raise HTTPException(status_code=404, detail="Checkout not found")
+    return checkout
 
 @router.post("/")
-def create_checkout(req: CheckoutRequest): # should i add a user parameter here to cue a warning if user has something checked out already
+def create_checkout(req: CheckoutRequest):
     asset = find_asset(req.asset_id)
     user = find_user(req.user_id)
 
     if asset is None:
-        return {"error": "Asset not found"}
+        raise HTTPException(status_code=404, detail="Asset not found")
 
     if user is None:
-        return {"error": "User not found"}
+        raise HTTPException(status_code=404, detail="User not found")
 
     checked_out_by = is_asset_checked_out(req.asset_id)
     if checked_out_by is not None:
-        return {"error": f"Asset already checked out by user {checked_out_by}"}
+        raise HTTPException(
+            status_code=400,
+            detail=f"Asset already checked out by user {checked_out_by}"
+        )
 
     # Creates new checkout
     checkout = Checkout(
@@ -31,17 +44,20 @@ def create_checkout(req: CheckoutRequest): # should i add a user parameter here 
         loaned_at=datetime.now(timezone.utc)
     )
 
+    asset.status = AssetStatus.checked_out # set status
+
     checkouts.append(checkout)
     return checkout
 
-@router.post("/{checkout_id}/return/")
-def checkout_return(checkout_id: int): # rename to modify checkout?
-    for c in checkouts:
-        if (c.id == checkout_id): # State Validation: check if it's currently checked out
+@router.patch("/{asset_id}/return/", response_model=Checkout)
+def checkout_return(asset_id: int):
+    checkout = next((c for c in checkouts if c.asset_id == asset_id), None) # [TODO]: Logic currently works if assets are unique
+    if checkout is None:
+        raise HTTPException(status_code=404, detail="Checkout not found")
 
-            # State Validation: Check if it has already been returned
-            if c.returned_at is not None:
-                return {"error": "Asset already returned"}
-            c.returned_at=datetime.now(timezone.utc)
-            return {"message": "Asset returned successfully","checkout": c}
-    return {"error": "Checkout not found"}
+    if checkout.returned_at is not None:
+        raise HTTPException(status_code=400, detail="Asset already returned")
+
+    checkout.returned_at = datetime.now(timezone.utc)
+
+    return checkout
