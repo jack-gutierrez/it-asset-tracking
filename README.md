@@ -8,25 +8,6 @@ This project simulates a system used by IT departments to track devices, manage 
 > Future versions will introduce persistent database storage.
 
 
-# Demo
-
-Run the API locally and explore it using FastAPI’s interactive documentation.
-
-Swagger UI:
-
-```
-http://127.0.0.1:8000/docs
-```
-
-ReDoc:
-
-```
-http://127.0.0.1:8000/redoc
-```
-
-These interfaces allow you to test API endpoints directly from your browser.
-
-
 # Features
 
 * Asset inventory management
@@ -142,6 +123,7 @@ Create a new asset:
 curl -X POST "http://127.0.0.1:8000/assets" \
 -H "Content-Type: application/json" \
 -d '{
+  "id": 1,
   "asset_tag": "A100",
   "device_type": "Laptop",
   "make": "Dell",
